@@ -3,7 +3,14 @@ window.Renderer = {
 		var canvas,
 			context,
 			renderEntity,
-			entityToCanvas;
+			entityToCanvas,
+			goal;
+
+		var goal = new Image();
+		goal.addEventListener("load", function() {
+			console.log("goal image loaded");
+		}, false);
+		goal.src = "goal.png";
 
 		canvas = document.createElement("canvas");
 		canvas.width = Math.min(window.innerWidth / 16, window.innerHeight / 9) * 16;
@@ -28,9 +35,18 @@ window.Renderer = {
 		
 		renderEntity = function(entity) {
 			context.fillStyle = entity.color;
-			context.fillRect(entity.x - entity.width / 2, entity.y - entity.height / 2, entity.width, entity.height, entity.color);
+			if(entity.img) {
+				context.drawImage(goal, entity.x - entity.width / 2, entity.y - entity.height / 2, entity.width, entity.height);
+			} else {
+				context.fillRect(entity.x - entity.width / 2, entity.y - entity.height / 2, entity.width, entity.height, entity.color);
+			}
 		};
-		
+
+		renderText = function(text, x, y, size) {
+			context.fillStyle = "#FFFFFF";
+			context.font = size + "px monospace";
+			context.fillText(text, x, y);
+		}
 		return {
 			render: function(local) {
 				context.clearRect(0, 0, canvas.width, canvas.height);
@@ -40,6 +56,12 @@ window.Renderer = {
 				local.blocks.forEach(function(block) {
 					renderEntity(entityToCanvas(block, local));
 				});
+				local.goals.forEach(function(goal) {
+					var canvasEntity = entityToCanvas(goal, local);
+					canvasEntity.img = "asdfsfsd";
+					renderEntity(canvasEntity);
+				});
+				renderText("local.locked: " + local.locked, 0, 24, 24);
 			}
 		};
 	}

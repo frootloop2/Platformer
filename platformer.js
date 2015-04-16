@@ -5,10 +5,16 @@ window.Platformer = (function() {
 		setup,
 		gameLoop,
 		update,
-		globalToLocal;
+		globalToLocal,
+		lockSwitchPressed,
+		levelNum;
 
 	setup = function() {
 		renderer = Renderer.create();
+
+		lockSwitchPressed = false;
+
+		levelNum = 0;
 
 		local = {
 			position: {
@@ -19,19 +25,35 @@ window.Platformer = (function() {
 				width: 1600,
 				height: 900
 			},
-			player: Block.create(800, 500, 50, 50, "#FF0000"),
-			blocks: []
+			player: null,
+			blocks: [],
+			goals: [],
+			locked: false
 		};
-
-		local.player.isGrounded = false;
 
 		global = {
-			blocks: []
+			blocks: [],
+			goals: []
 		};
+		
+		loadLevel();
+	};
 
-		global.blocks.push(Block.create(0, 75, 50, 50, "#808080"));
-		//global.blocks.push(Block.create(1200, 75, 50, 50, "#808080"));
-		global.blocks.push(Block.create(800, 25, 1600, 50, "#808080"));
+	loadLevel = function() {
+		local.position = {
+			x: 0,
+			y: 0
+		};
+		global.blocks = []
+		global.goals = []
+		local.player = Block.create(levels[levelNum].player.x, levels[levelNum].player.y, levels[levelNum].player.width, levels[levelNum].player.height, levels[levelNum].player.color);
+		local.player.isGrounded = false;
+		levels[levelNum].blocks.forEach(function(block) {
+			global.blocks.push(Block.create(block.x, block.y, block.width, block.height, block.color));
+		});
+		levels[levelNum].goals.forEach(function(goal) {
+			global.goals.push(Block.create(goal.x, goal.y, goal.width, goal.height, goal.color));
+		});
 	};
 
 	gameLoop = function() {
@@ -50,7 +72,16 @@ window.Platformer = (function() {
 		jumpAcceleration = 15;
 
 		globalToLocal();
-
+		if(Keyboard.isKeyPressed(Keyboard.Keys.SPACE)) {
+			if(lockSwitchPressed === false) {
+				if((local.player.x + local.player.width / 2) % local.size.width > (local.size.width + local.player.x - local.player.width / 2) % local.size.width) {
+					local.locked = !local.locked;
+				}
+				lockSwitchPressed = true;
+			}
+		} else {
+			lockSwitchPressed = false;
+		}
 		if(Keyboard.isKeyPressed(Keyboard.Keys.LEFT)) {
 			local.player.dx = Math.max(-maxSpeed, local.player.dx - 1);
 		}
@@ -64,7 +95,7 @@ window.Platformer = (function() {
 				local.player.dx = Math.min(0, local.player.dx + 1);
 			}
 		}
-		if(Keyboard.isKeyPressed(Keyboard.Keys.SPACE)) {
+		if(Keyboard.isKeyPressed(Keyboard.Keys.UP)) {
 			if(local.player.isGrounded && local.player.dy === 0) {
 				local.player.dy += jumpAcceleration;
 				local.player.isGrounded = false;
@@ -124,12 +155,35 @@ window.Platformer = (function() {
 			}
 		}
 
+		// goal touched
+		{
+			local.goals.forEach(function(goal) {
+				if(local.player.x + local.player.width / 2 > goal.x - goal.width / 2 && local.player.x - local.player.width / 2 < goal.x + goal.width / 2 &&
+				   local.player.y + local.player.height / 2 > goal.y - goal.height / 2 && local.player.y - local.player.height / 2 < goal.y + goal.height / 2) {
+				   	levelNum++;
+					loadLevel(levelNum);
+				}
+			});
+		}
+
 		// screen wrap
 		local.player.x = (local.player.x + local.size.width) % local.size.width;
+		//local.player.y = (local.player.y + local.size.height) % local.size.height;
 
-		if(local.player.dx > 0) {
-			local.position.x += local.player.dx;
-			local.player.x -= local.player.dx;
+		// screen scroll
+		if(local.locked === false) {
+			if(local.player.dx > 0) {
+				local.position.x += local.player.dx;
+				local.player.x -= local.player.dx;
+			} else {
+				local.position.x += local.player.dx;
+				local.player.x -= local.player.dx;
+			}	
+		}
+
+		// death
+		if(local.player.y < 0) {
+			loadLevel(levelNum);
 		}
 	};
 
@@ -151,9 +205,31 @@ window.Platformer = (function() {
 
 				local.blocks.push(newBlock);
 
-				// ofscreen blocks that make screen wrap collision detection work
+				// offscreen blocks that make screen wrap collision detection work
 				local.blocks.push(Block.create(newBlock.x - local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
 				local.blocks.push(Block.create(newBlock.x + local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
+			}
+		});
+		local.goals = [];
+		global.goals.forEach(function(goal) {
+			var newGoal,
+				distance,
+				direction;
+			if(goal.x - goal.width / 2 < local.position.x + local.size.width && goal.x + goal.width / 2 > local.position.x) {
+				newGoal = Block.create(goal.x - local.position.x, goal.y - local.position.y, goal.width, goal.height, goal.color);
+
+				// trim offscreen parts of goal
+				direction = (-(newGoal.x - newGoal.width / 2) > 0) * 2 - 1;
+				distance = Math.max(0, Math.max(-(newGoal.x - newGoal.width / 2), newGoal.x + newGoal.width / 2 - local.size.width));
+				
+				newGoal.width -= distance;
+				newGoal.x += direction * distance / 2;
+
+				local.goals.push(newGoal);
+
+				// offscreen goals that make screen wrap collision detection work
+				local.goals.push(Block.create(newGoal.x - local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
+				local.goals.push(Block.create(newGoal.x + local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
 			}
 		});
 	};
