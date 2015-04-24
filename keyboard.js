@@ -6,6 +6,9 @@ window.Keyboard = (function() {
 	window.addEventListener("keyup", function(ev) {
 		delete _pressed[ev.keyCode];
 	});
+	window.addEventListener("blur", function(ev) {
+		_pressed = {};
+	});
 	return {
 		Keys: {
 			SPACE: 32,
@@ -18,7 +21,9 @@ window.Keyboard = (function() {
 			A: 65,
 			D: 68,
 			S: 83,
-			W: 87
+			W: 87,
+
+			C: 67
 		},
 		isKeyPressed: function(keyCode) {
 			return _pressed[keyCode] !== undefined;
