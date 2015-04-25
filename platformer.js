@@ -40,12 +40,16 @@ window.Platformer = (function() {
 	};
 
 	loadLevel = function() {
+		if(levelNum >= levels.length) {
+			levelNum = 0;
+		}
 		local.position = {
 			x: 0,
 			y: 0
 		};
-		global.blocks = []
-		global.goals = []
+		local.locked = false;
+		global.blocks = [];
+		global.goals = [];
 		local.player = Block.create(levels[levelNum].player.x, levels[levelNum].player.y, levels[levelNum].player.width, levels[levelNum].player.height, levels[levelNum].player.color);
 		local.player.isGrounded = false;
 		levels[levelNum].blocks.forEach(function(block) {
@@ -64,6 +68,7 @@ window.Platformer = (function() {
 
 	update = function() {
 		var distanceToNearestBlock,
+			distance,
 			maxSpeed,
 			jumpAcceleration,
 			direction;
@@ -71,7 +76,6 @@ window.Platformer = (function() {
 		maxSpeed = 10;
 		jumpAcceleration = 15;
 
-		globalToLocal();
 		if(Keyboard.isKeyPressed(Keyboard.Keys.SPACE)) {
 			if(lockSwitchPressed === false) {
 				if((local.player.x + local.player.width / 2) % local.size.width > (local.size.width + local.player.x - local.player.width / 2) % local.size.width) {
@@ -101,6 +105,8 @@ window.Platformer = (function() {
 				local.player.isGrounded = false;
 			}
 		}
+
+		globalToLocal();
 
 		// gravity
 		local.player.dy--;
@@ -162,6 +168,7 @@ window.Platformer = (function() {
 				   local.player.y + local.player.height / 2 > goal.y - goal.height / 2 && local.player.y - local.player.height / 2 < goal.y + goal.height / 2) {
 				   	levelNum++;
 					loadLevel(levelNum);
+					return;
 				}
 			});
 		}
@@ -178,9 +185,17 @@ window.Platformer = (function() {
 			} else {
 				local.position.x += local.player.dx;
 				local.player.x -= local.player.dx;
-			}	
+			}
+			
+			globalToLocal(); // if we scroll then the global objects local instance is no longer in the right place which means it gets rendered in the wrong spot
 		}
 
+		if(Keyboard.isKeyPressed(Keyboard.Keys.C)) {
+				distance = Math.round((local.player.x - local.size.width / 2) / 16);
+				local.position.x += distance;
+				local.player.x -= distance;
+			}
+		
 		// death
 		if(local.player.y < 0) {
 			loadLevel(levelNum);
@@ -203,11 +218,12 @@ window.Platformer = (function() {
 				newBlock.width -= distance;
 				newBlock.x += direction * distance / 2;
 
-				local.blocks.push(newBlock);
-
 				// offscreen blocks that make screen wrap collision detection work
 				local.blocks.push(Block.create(newBlock.x - local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
 				local.blocks.push(Block.create(newBlock.x + local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
+
+				newBlock = Block.create(block.x - local.position.x, block.y - local.position.y, block.width, block.height, block.color);				
+				local.blocks.push(newBlock);
 			}
 		});
 		local.goals = [];
@@ -225,11 +241,12 @@ window.Platformer = (function() {
 				newGoal.width -= distance;
 				newGoal.x += direction * distance / 2;
 
-				local.goals.push(newGoal);
-
 				// offscreen goals that make screen wrap collision detection work
 				local.goals.push(Block.create(newGoal.x - local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
 				local.goals.push(Block.create(newGoal.x + local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
+
+				newGoal = Block.create(goal.x - local.position.x, goal.y - local.position.y, goal.width, goal.height, goal.color);
+				local.goals.push(newGoal);
 			}
 		});
 	};
