@@ -1,262 +1,176 @@
 window.Platformer = (function() {
-	var global,
-		local,
+	var entities,
 		renderer,
-		setup,
-		gameLoop,
-		update,
-		globalToLocal,
-		lockSwitchPressed,
+		camera,
+		view,
 		levelNum;
 
-	setup = function() {
+	function setup() {
+		entities = [];
+		view = {
+			width: 1600,
+			height: 900
+		};
 		renderer = Renderer.create();
-
-		lockSwitchPressed = false;
-
 		levelNum = 0;
-
-		local = {
-			position: {
-				x: 0,
-				y: 0
-			},
-			size: {
-				width: 1600,
-				height: 900
-			},
-			player: null,
-			blocks: [],
-			goals: [],
-			locked: false
-		};
-
-		global = {
-			blocks: [],
-			goals: []
-		};
-		
 		loadLevel();
 	};
 
-	loadLevel = function() {
+	function loadLevel() {
 		if(levelNum >= levels.length) {
 			levelNum = 0;
 		}
-		local.position = {
-			x: 0,
-			y: 0
-		};
-		local.locked = false;
-		global.blocks = [];
-		global.goals = [];
-		local.player = Block.create(levels[levelNum].player.x, levels[levelNum].player.y, levels[levelNum].player.width, levels[levelNum].player.height, levels[levelNum].player.color);
-		local.player.isGrounded = false;
-		levels[levelNum].blocks.forEach(function(block) {
-			global.blocks.push(Block.create(block.x, block.y, block.width, block.height, block.color));
-		});
-		levels[levelNum].goals.forEach(function(goal) {
-			global.goals.push(Block.create(goal.x, goal.y, goal.width, goal.height, goal.color));
-		});
+		entities = levels[levelNum];
+		camera = entities.filter(function(entity) {
+			return entity.camera;
+		})[0];
 	};
 
-	gameLoop = function() {
+	function gameLoop() {
 		update();
-		renderer.render(local);
+		renderer.render(entities, view, camera);
 		requestAnimationFrame(gameLoop);
 	};
 
-	update = function() {
-		var distanceToNearestBlock,
-			distance,
-			maxSpeed,
-			jumpAcceleration,
-			direction;
-
-		maxSpeed = 10;
-		jumpAcceleration = 15;
-
-		if(Keyboard.isKeyPressed(Keyboard.Keys.SPACE)) {
-			if(lockSwitchPressed === false) {
-				if((local.player.x + local.player.width / 2) % local.size.width > (local.size.width + local.player.x - local.player.width / 2) % local.size.width) {
-					local.locked = !local.locked;
+	function update() {
+		// player
+		entities.filter(function(entity) {
+			return entity.player;
+		}).forEach(function(entity) {
+			var maxSpeed = 12,
+				acceleration = 1,
+				friction = 1;
+			if(Keyboard.isKeyPressed(Keyboard.Keys.LEFT)) {
+				entity.dx = Math.max(entity.dx - acceleration, -maxSpeed);
+			}
+			if(Keyboard.isKeyPressed(Keyboard.Keys.RIGHT)) {
+				entity.dx = Math.min(entity.dx + acceleration, maxSpeed);
+			}
+			if(Keyboard.isKeyPressed(Keyboard.Keys.RIGHT) === Keyboard.isKeyPressed(Keyboard.Keys.LEFT)) {
+				if(entity.dx > 0) {
+					entity.dx = Math.max(0, entity.dx - friction);
+				} else {
+					entity.dx = Math.min(0, entity.dx + friction);
 				}
-				lockSwitchPressed = true;
 			}
-		} else {
-			lockSwitchPressed = false;
-		}
-		if(Keyboard.isKeyPressed(Keyboard.Keys.LEFT)) {
-			local.player.dx = Math.max(-maxSpeed, local.player.dx - 1);
-		}
-		if(Keyboard.isKeyPressed(Keyboard.Keys.RIGHT)) {
-			local.player.dx = Math.min(maxSpeed, local.player.dx + 1);
-		}
-		if(Keyboard.isKeyPressed(Keyboard.Keys.RIGHT) === Keyboard.isKeyPressed(Keyboard.Keys.LEFT)) {
-			if(local.player.dx > 0) {
-				local.player.dx = Math.max(0, local.player.dx - 1);
-			} else {
-				local.player.dx = Math.min(0, local.player.dx + 1);
+			if(Keyboard.isKeyPressed(Keyboard.Keys.UP)) {
+				if(entity.dy === 0 && entity.landed) {
+					entity.dy = 20;
+					entity.landed = false;					
+				}
 			}
-		}
-		if(Keyboard.isKeyPressed(Keyboard.Keys.UP)) {
-			if(local.player.isGrounded && local.player.dy === 0) {
-				local.player.dy += jumpAcceleration;
-				local.player.isGrounded = false;
-			}
-		}
-
-		globalToLocal();
+		});
 
 		// gravity
-		local.player.dy--;
+		entities.filter(function(entity) {
+			return entity.gravity && entity.dy !== undefined;
+		}).forEach(function(entity) {
+			entity.dy--;
+		});
 
 		// step x
 		{
-			direction = (local.player.dx > 0) * 2 - 1;		// this makes me so happy [: - richardo
-			distanceToNearestBlock = Infinity;
-			local.blocks.filter(function(block) {
-				var blockOverlapsPlayerZone,
-					blockInDirectionOfPlayerMovement;
+			entities.filter(function(entity) {
+				return entity.x !== undefined && entity.y !== undefined && entity.dx !== undefined && entity.dy !== undefined;
+			}).forEach(function(entity) {
+				var distanceToNearestEntity,
+					nearEdge,
+					farEdge;
 
-				blockOverlapsPlayerZone = local.player.y + local.player.height / 2 > block.y - block.height / 2 && local.player.y - local.player.height / 2 < block.y + block.height / 2;
-				blockInDirectionOfPlayerMovement = ((block.x - direction * block.width / 2) - (local.player.x + direction * local.player.width / 2)) * direction >= 0;
-				return(blockOverlapsPlayerZone && blockInDirectionOfPlayerMovement);
-			}).forEach(function(block) {
-				var distanceToBlock;
-				
-				distanceToBlock = Math.abs((local.player.x + direction * local.player.width / 2) - (block.x - direction * block.width / 2));
-				distanceToNearestBlock = Math.min(distanceToBlock, distanceToNearestBlock);
+				direction = (entity.dx > 0) * 2 - 1;
+				distanceToNearestEntity = Infinity;
+
+				nearEdge = (entity.dx > 0) ? Entity.getLeft : Entity.getRight;
+				farEdge = (entity.dx > 0) ? Entity.getRight: Entity.getLeft;
+				getExtraEntities().filter(function(otherEntity) {
+					var otherEntityOverlapsEntityZone,
+						otherEntityInDirectionOfEntityMovement;
+
+					otherEntityOverlapsEntityZone = Entity.getTop(entity) > Entity.getBottom(otherEntity) && Entity.getBottom(entity) < Entity.getTop(otherEntity);
+					otherEntityInDirectionOfEntityMovement = closestToValue(entity.x, farEdge(entity), nearEdge(otherEntity)) === farEdge(entity);
+					return otherEntity !== entity && otherEntityOverlapsEntityZone && otherEntityInDirectionOfEntityMovement;
+				}).forEach(function(otherEntity) {
+					var distanceToOtherEntity;
+					distanceToOtherEntity = nearEdge(otherEntity) - farEdge(entity);
+					distanceToNearestEntity = closestToValue(0, distanceToOtherEntity, distanceToNearestEntity);
+				});
+				entity.x += closestToValue(0, distanceToNearestEntity, entity.dx);
+				if(entity.wraps === true) {
+					entity.x = (entity.x - camera.x + view.width * 3 / 2) % view.width + camera.x - view.width / 2;
+				}
+				if(Math.abs(distanceToNearestEntity) < Math.abs(entity.dx)) {
+					entity.dx = 0;
+				}
 			});
-			
-			local.player.x += Math.min(distanceToNearestBlock, local.player.dx * direction) * direction;
-			if(distanceToNearestBlock < local.player.dx * direction) {
-				local.player.dx = 0;
-			}
 		}
 
 		// step y
 		{
-			direction = (local.player.dy > 0) * 2 - 1;
-			distanceToNearestBlock = Infinity;
-			local.blocks.filter(function(block) {
-				var blockOverlapsPlayerZone,
-					blockInDirectionOfPlayerMovement;
+			entities.filter(function(entity) {
+				return entity.x !== undefined && entity.y !== undefined && entity.dx !== undefined && entity.dy !== undefined;
+			}).forEach(function(entity) {
+				var distanceToNearestEntity,
+					nearEdge,
+					farEdge;
 
-				blockOverlapsPlayerZone = local.player.x + local.player.width / 2 > block.x - block.width / 2 && local.player.x - local.player.width / 2 < block.x + block.width / 2;
-				blockInDirectionOfPlayerMovement = ((block.y - direction * block.height / 2) - (local.player.y + direction * local.player.height / 2)) * direction >= 0;
+				distanceToNearestEntity = Infinity;
 
-				return(blockOverlapsPlayerZone && blockInDirectionOfPlayerMovement);
-			}).forEach(function(block) {
-				var distanceToBlock;
-				
-				distanceToBlock = Math.abs((local.player.y + direction * local.player.height / 2) - (block.y - direction * block.height / 2));
-				distanceToNearestBlock = Math.min(distanceToBlock, distanceToNearestBlock);
-			});
-			
-			local.player.y += Math.min(distanceToNearestBlock, local.player.dy * direction) * direction;
-			if(distanceToNearestBlock < local.player.dy * direction) {
-				local.player.dy = 0;
-				local.player.isGrounded = direction < 0;
-			}
-		}
+				nearEdge = (entity.dy > 0) ? Entity.getBottom : Entity.getTop;
+				farEdge = (entity.dy > 0) ? Entity.getTop : Entity.getBottom;
 
-		// goal touched
-		{
-			local.goals.forEach(function(goal) {
-				if(local.player.x + local.player.width / 2 > goal.x - goal.width / 2 && local.player.x - local.player.width / 2 < goal.x + goal.width / 2 &&
-				   local.player.y + local.player.height / 2 > goal.y - goal.height / 2 && local.player.y - local.player.height / 2 < goal.y + goal.height / 2) {
-				   	levelNum++;
-					loadLevel(levelNum);
-					return;
+				getExtraEntities().filter(function(otherEntity){
+					var otherEntityOverlapsEntityZone,
+						otherEntityInDirectionOfEntityMovement;
+
+					otherEntityOverlapsEntityZone = Entity.getRight(entity) > Entity.getLeft(otherEntity) && Entity.getLeft(entity) < Entity.getRight(otherEntity);
+					otherEntityInDirectionOfEntityMovement = closestToValue(entity.x, farEdge(entity), nearEdge(otherEntity)) === farEdge(entity);
+					return otherEntityOverlapsEntityZone && otherEntityInDirectionOfEntityMovement;
+				}).forEach(function(otherEntity) {
+					var distanceToOtherEntity;
+					distanceToOtherEntity = nearEdge(otherEntity) - farEdge(entity);
+					distanceToNearestEntity = closestToValue(0, distanceToOtherEntity, distanceToNearestEntity);
+				});
+				entity.y += closestToValue(0, distanceToNearestEntity, entity.dy);
+				if(Math.abs(distanceToNearestEntity) < Math.abs(entity.dy)) {
+					entity.dy = 0;
+					entity.landed = true;
 				}
 			});
 		}
+	};
 
-		// screen wrap
-		local.player.x = (local.player.x + local.size.width) % local.size.width;
-		//local.player.y = (local.player.y + local.size.height) % local.size.height;
+	function closestToValue(v, a, b) {
+		return Math.abs(a) - v < Math.abs(b) - v ? a : b;
+	};
 
-		// screen scroll
-		if(local.locked === false) {
-			if(local.player.dx > 0) {
-				local.position.x += local.player.dx;
-				local.player.x -= local.player.dx;
-			} else {
-				local.position.x += local.player.dx;
-				local.player.x -= local.player.dx;
-			}
+	function getExtraEntities() {
+		var allEntities;
+		allEntities = [].concat(entities);
+		entities.filter(function(entity) {
+			return entity.x - entity.width / 2 < camera.x + view.width / 2 && entity.x + entity.width / 2 > camera.x - view.width / 2; // on screen any amount
+		}).forEach(function(entity) {
+			var newEntity,
+				direction,
+				distance;
+			newEntity = Entity.clone(entity);
+
+			direction = Entity.getLeft(newEntity) < camera.x - view.width / 2 ? -1 : 1;
+			distance = Math.max(0, Math.max(-(Entity.getLeft(newEntity) - camera.x + view.width / 2), Entity.getRight(newEntity) - camera.x - view.width / 2));
+			newEntity.width -= distance;
+			newEntity.x -= direction * distance / 2;
 			
-			globalToLocal(); // if we scroll then the global objects local instance is no longer in the right place which means it gets rendered in the wrong spot
-		}
-
-		if(Keyboard.isKeyPressed(Keyboard.Keys.C)) {
-				distance = Math.round((local.player.x - local.size.width / 2) / 16);
-				local.position.x += distance;
-				local.player.x -= distance;
-			}
-		
-		// death
-		if(local.player.y < 0) {
-			loadLevel(levelNum);
-		}
-	};
-
-	globalToLocal = function() {
-		local.blocks = [];
-		global.blocks.forEach(function(block) {
-			var newBlock,
-				distance,
-				direction;
-			if(block.x - block.width / 2 < local.position.x + local.size.width && block.x + block.width / 2 > local.position.x) {
-				newBlock = Block.create(block.x - local.position.x, block.y - local.position.y, block.width, block.height, block.color);
-
-				// trim offscreen parts of block
-				direction = (-(newBlock.x - newBlock.width / 2) > 0) * 2 - 1;
-				distance = Math.max(0, Math.max(-(newBlock.x - newBlock.width / 2), newBlock.x + newBlock.width / 2 - local.size.width));
-				
-				newBlock.width -= distance;
-				newBlock.x += direction * distance / 2;
-
-				// offscreen blocks that make screen wrap collision detection work
-				local.blocks.push(Block.create(newBlock.x - local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
-				local.blocks.push(Block.create(newBlock.x + local.size.width, newBlock.y, newBlock.width, newBlock.height, newBlock.color));
-
-				newBlock = Block.create(block.x - local.position.x, block.y - local.position.y, block.width, block.height, block.color);				
-				local.blocks.push(newBlock);
-			}
+			// left copy
+			newEntity.x -= view.width;
+			allEntities.push(newEntity);
+			
+			// right copy
+			newEntity = Entity.clone(newEntity);
+			newEntity.x += 2 * view.width;
+			allEntities.push(newEntity);
 		});
-		local.goals = [];
-		global.goals.forEach(function(goal) {
-			var newGoal,
-				distance,
-				direction;
-			if(goal.x - goal.width / 2 < local.position.x + local.size.width && goal.x + goal.width / 2 > local.position.x) {
-				newGoal = Block.create(goal.x - local.position.x, goal.y - local.position.y, goal.width, goal.height, goal.color);
-
-				// trim offscreen parts of goal
-				direction = (-(newGoal.x - newGoal.width / 2) > 0) * 2 - 1;
-				distance = Math.max(0, Math.max(-(newGoal.x - newGoal.width / 2), newGoal.x + newGoal.width / 2 - local.size.width));
-				
-				newGoal.width -= distance;
-				newGoal.x += direction * distance / 2;
-
-				// offscreen goals that make screen wrap collision detection work
-				local.goals.push(Block.create(newGoal.x - local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
-				local.goals.push(Block.create(newGoal.x + local.size.width, newGoal.y, newGoal.width, newGoal.height, newGoal.color));
-
-				newGoal = Block.create(goal.x - local.position.x, goal.y - local.position.y, goal.width, goal.height, goal.color);
-				local.goals.push(newGoal);
-			}
-		});
+		return allEntities;
 	};
 
-	return {
-		init: function() {
-			setup();
-			gameLoop();
-		}
-	};
+	setup();
+	gameLoop();
 }());
-
-Platformer.init();
