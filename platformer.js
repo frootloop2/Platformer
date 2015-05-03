@@ -68,6 +68,7 @@ window.Platformer = (function() {
 			entity.dy--;
 		});
 
+		
 		// step x
 		{
 			entities.filter(function(entity) {
@@ -87,7 +88,7 @@ window.Platformer = (function() {
 						otherEntityInDirectionOfEntityMovement;
 
 					otherEntityOverlapsEntityZone = Entity.getTop(entity) > Entity.getBottom(otherEntity) && Entity.getBottom(entity) < Entity.getTop(otherEntity);
-					otherEntityInDirectionOfEntityMovement = closestToValue(entity.x, farEdge(entity), nearEdge(otherEntity)) === farEdge(entity);
+					otherEntityInDirectionOfEntityMovement = (nearEdge(otherEntity) - entity.x) * (farEdge(entity) - entity.x) >= 0;
 					return otherEntity !== entity && otherEntityOverlapsEntityZone && otherEntityInDirectionOfEntityMovement;
 				}).forEach(function(otherEntity) {
 					var distanceToOtherEntity;
@@ -123,10 +124,11 @@ window.Platformer = (function() {
 						otherEntityInDirectionOfEntityMovement;
 
 					otherEntityOverlapsEntityZone = Entity.getRight(entity) > Entity.getLeft(otherEntity) && Entity.getLeft(entity) < Entity.getRight(otherEntity);
-					otherEntityInDirectionOfEntityMovement = closestToValue(entity.x, farEdge(entity), nearEdge(otherEntity)) === farEdge(entity);
-					return otherEntityOverlapsEntityZone && otherEntityInDirectionOfEntityMovement;
+					otherEntityInDirectionOfEntityMovement = (nearEdge(otherEntity) - entity.y) * (farEdge(entity) - entity.y) >= 0;
+					return entity !== otherEntity && otherEntityOverlapsEntityZone && otherEntityInDirectionOfEntityMovement;
 				}).forEach(function(otherEntity) {
 					var distanceToOtherEntity;
+					
 					distanceToOtherEntity = nearEdge(otherEntity) - farEdge(entity);
 					distanceToNearestEntity = closestToValue(0, distanceToOtherEntity, distanceToNearestEntity);
 				});
@@ -140,7 +142,7 @@ window.Platformer = (function() {
 	};
 
 	function closestToValue(v, a, b) {
-		return Math.abs(a) - v < Math.abs(b) - v ? a : b;
+		return Math.abs(a - v) < Math.abs(b - v) ? a : b;
 	};
 
 	function getExtraEntities() {

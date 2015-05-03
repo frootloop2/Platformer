@@ -1,9 +1,9 @@
 window.levels = [
 	[
 		{
-			x: 900,
+			x: 600,
 			y: 50,
-			width: 1550,
+			width: 800,
 			height: 100,
 			color: "#777777",
 			collidable: true,
@@ -16,7 +16,7 @@ window.levels = [
 			dy: 0,
 			width: 50,
 			height: 50,
-			color: "#FF6666",
+			color: "#FF7777",
 			gravity: true,
 			player: true,
 			wraps: true,
@@ -30,20 +30,11 @@ window.levels = [
 			dy: 0,
 			width: 25,
 			height: 25,
-			color: "#6666FF",
+			color: "#7777FF",
 			gravity: true,
 			visible: true,
 			collidable: true,
 			camera: true
-		},
-		{
-			x: 1700,
-			y: 150,
-			width: 100,
-			height: 100,
-			color: "#666666",
-			collidable: true,
-			visible: true
 		}
 	]
 ];
