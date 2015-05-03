@@ -19,10 +19,10 @@ window.Keyboard = (function() {
 			DOWN:  40,
 			
 			A: 65,
-			D: 68,
-			S: 83,
+			
 			W: 87,
-
+			X: 88,
+			Z: 90,
 			C: 67
 		},
 		isKeyPressed: function(keyCode) {

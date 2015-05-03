@@ -14,9 +14,7 @@ window.Render = (function() {
 		runSystem: function(model, canvas) {
 			var context = canvas.getContext("2d");
 			context.clearRect(0, 0, canvas.width, canvas.height);
-			model.getEntities().filter(function(entity) {
-				return entity.visible;
-			}).forEach(function(entity) {
+			model.getEntities().forEach(function(entity) {
 				var clonedEntity;
 				renderEntity(entity, model.getView(), model.getCamera(), canvas, context);
 				if(entity.wraps === true) {

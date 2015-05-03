@@ -19,5 +19,11 @@ window.Entity = {
 	},
 	getLeft: function(entity) {
 		return entity.x - entity.width / 2;
+	},
+	overlapsEntity: function(entity, otherEntity) {
+		return Entity.getRight(entity) > Entity.getLeft(otherEntity) &&
+			   Entity.getLeft(entity) < Entity.getRight(otherEntity) &&
+			   Entity.getTop(entity) > Entity.getBottom(otherEntity) &&
+			   Entity.getBottom(entity) < Entity.getTop(otherEntity);
 	}
 };

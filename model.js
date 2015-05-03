@@ -18,11 +18,21 @@ window.Model = {
 			getView: function() {
 				return view;
 			},
-			loadLevel: function() {
-				if(levelNum >= window.Levels.length) {
-					levelNum = 0;
+			getLevelNum: function() {
+				return levelNum;
+			},
+			loadLevel: function(destinationLevelNum) {
+				if(destinationLevelNum >= window.Levels.length) {
+					console.log("error: level " + destinationLevelNum + " not found");
+					return;
 				}
-				entities = window.Levels[levelNum];
+				levelNum = destinationLevelNum;
+				entities = [];
+				window.Levels[levelNum].forEach(function(entity) {
+					// copy the entities so we don't change the contents of window.Levels
+					// this makes the level 'reset' next time the player comes back to it.
+					entities.push(Entity.clone(entity));
+				});
 				camera = entities.filter(function(entity) {
 					return entity.camera;
 				})[0];
