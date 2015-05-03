@@ -1,24 +1,5 @@
-window.Render = {
-	runSystem: function(model, canvas) {
-		var _this = this,
-			context = canvas.getContext("2d");
-		context.clearRect(0, 0, canvas.width, canvas.height);
-		model.entities.filter(function(entity) {
-			return entity.visible;
-		}).forEach(function(entity) {
-			var clonedEntity;
-			_this.renderEntity(entity, model.view, model.camera, canvas, context);
-			if(entity.wraps === true) {
-				clonedEntity = Entity.clone(entity);
-				clonedEntity.x += model.view.width;
-				_this.renderEntity(clonedEntity, model.view, model.camera, canvas, context);
-				clonedEntity.x -= 2 * model.view.width;
-				_this.renderEntity(clonedEntity, model.view, model.camera, canvas, context);
-			}
-		});
-	},
-	// TODO: make helper function private var
-	renderEntity: function(entity, view, camera, canvas, context) {
+window.Render = (function() {
+	function renderEntity(entity, view, camera, canvas, context) {
 		var widthRatio = canvas.width / view.width,
 			heightRatio = canvas.height / view.height;
 		context.fillStyle = entity.color;
@@ -28,5 +9,24 @@ window.Render = {
 						 entity.height * heightRatio, // height
 						 entity.color // color
 		);
-	}
-};
+	};
+	return {
+		runSystem: function(model, canvas) {
+			var context = canvas.getContext("2d");
+			context.clearRect(0, 0, canvas.width, canvas.height);
+			model.getEntities().filter(function(entity) {
+				return entity.visible;
+			}).forEach(function(entity) {
+				var clonedEntity;
+				renderEntity(entity, model.getView(), model.getCamera(), canvas, context);
+				if(entity.wraps === true) {
+					clonedEntity = Entity.clone(entity);
+					clonedEntity.x += model.getView().width;
+					renderEntity(clonedEntity, model.getView(), model.getCamera(), canvas, context);
+					clonedEntity.x -= 2 * model.getView().width;
+					renderEntity(clonedEntity, model.getView(), model.getCamera(), canvas, context);
+				}
+			});
+		}
+	};
+}());
