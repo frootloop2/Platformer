@@ -1,4 +1,4 @@
-window.levels = [
+window.Levels = [
 	[
 		{
 			x: 600,
