@@ -1,13 +1,22 @@
 window.Keyboard = (function() {
-	var _pressed = {};
+	var _pressed = {},
+		_truePressed = {},
+		_pressedThisFrame = {},
+		_pressedSinceLastFrame = {};
+
 	window.addEventListener("keydown", function(ev) {
-		_pressed[ev.keyCode] = true;
+		if(_pressed[ev.keyCode] !== true) {
+			_pressed[ev.keyCode] = true;
+			_pressedSinceLastFrame[ev.keyCode] = true;
+		}
 	});
 	window.addEventListener("keyup", function(ev) {
 		delete _pressed[ev.keyCode];
+		delete _pressedSinceLastFrame[ev.keyCode];
 	});
 	window.addEventListener("blur", function(ev) {
 		_pressed = {};
+		_pressedSinceLastFrame = {};
 	});
 	return {
 		Keys: {
@@ -19,14 +28,20 @@ window.Keyboard = (function() {
 			DOWN:  40,
 			
 			A: 65,
-			
-			W: 87,
+			C: 67,
 			X: 88,
-			Z: 90,
-			C: 67
+			Z: 90
 		},
 		isKeyPressed: function(keyCode) {
-			return _pressed[keyCode] !== undefined;
+			return _truePressed[keyCode] !== undefined;
+		},
+		isKeyPressedSinceStartOfLastFrame: function(keyCode) {
+			return _pressedThisFrame[keyCode] !== undefined;
+		},
+		tickFrame: function() {
+			_pressedThisFrame = _pressedSinceLastFrame;
+			_pressedSinceLastFrame = {};
+			_truePressed = _pressed;
 		}
 	};
 }());

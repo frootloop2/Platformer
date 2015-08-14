@@ -6,12 +6,10 @@ window.Input = (function() {
 		rightKey = Keyboard.Keys.RIGHT,
 		jumpKey = Keyboard.Keys.Z,
 		grabKey = Keyboard.Keys.X,
-		grabKeyPressed = false;
 		doorKey = Keyboard.Keys.C;
-		doorKeyPressed = false;
 
 	return {
-		runSystem: function(model, canvas) {
+		runSystem: function(model) {
 			model.getEntities().filter(function(entity) {
 				return entity.player;
 			}).forEach(function(playerEntity) {
@@ -28,7 +26,7 @@ window.Input = (function() {
 						playerEntity.dx = Math.min(0, playerEntity.dx + friction);
 					}
 				}
-				if(Keyboard.isKeyPressed(jumpKey)) {
+				if(Keyboard.isKeyPressedSinceStartOfLastFrame(jumpKey)) {
 					if(playerEntity.dy === 0 && playerEntity.landed) {
 						playerEntity.dy = 20;
 						playerEntity.landed = false;
@@ -36,36 +34,38 @@ window.Input = (function() {
 				}
 
 				// pick up item
-				model.getEntities().filter(function(entity) {
-					return entity.grabbable;
-				}).forEach(function(grabbableEntity) {
-					if(Keyboard.isKeyPressed(grabKey) && grabKeyPressed === false) {
-						if(playerEntity.heldEntity !== undefined) {
-							// drop
-							playerEntity.heldEntity.collisionType = "actor";
-							playerEntity.heldEntity.dy = 0;
-							playerEntity.heldEntity = undefined;
-						} else if(Entity.overlapsEntity(playerEntity, grabbableEntity)) {
-							// grab
-							playerEntity.heldEntity = grabbableEntity;
-							playerEntity.heldEntity.collisionType = "held";
-							playerEntity.heldEntity.x = playerEntity.x;
-							playerEntity.heldEntity.y = playerEntity.y;
-						}
+				if(Keyboard.isKeyPressedSinceStartOfLastFrame(grabKey)) {
+					if(playerEntity.heldEntity === undefined) {
+						// grab
+						model.getEntities().filter(function(entity) {
+							return entity.grabbable;
+						}).some(function(grabbableEntity) {
+							if(Entity.overlapsEntity(playerEntity, grabbableEntity)) {
+								playerEntity.heldEntity = grabbableEntity;
+								playerEntity.heldEntity.collisionType = "held";
+								playerEntity.heldEntity.x = playerEntity.x;
+								playerEntity.heldEntity.y = playerEntity.y;
+							}
+							// stops trying to grab others once it grabs something
+							return playerEntity.heldEntity !== undefined;
+						});	
+					} else {
+						// drop
+						playerEntity.heldEntity.collisionType = "actor";
+						playerEntity.heldEntity.dy = 0;
+						playerEntity.heldEntity = undefined;
 					}
-				});
-				grabKeyPressed = Keyboard.isKeyPressed(grabKey);
+				}
 
-				if(Keyboard.isKeyPressed(doorKey) && doorKeyPressed === false) {
+				if(Keyboard.isKeyPressedSinceStartOfLastFrame(doorKey)) {
 					model.getEntities().filter(function(entity) {
 						return entity.door;
 					}).forEach(function(doorEntity) {
 						if(Entity.overlapsEntity(playerEntity, doorEntity)) {
-							model.loadLevel(doorEntity.doorDestination);
+							model.loadRoom(doorEntity.doorDestination);
 						}
 					})
 				}
-				doorKeyPressed = Keyboard.isKeyPressed(doorKey);
 			});
 		}
 	};

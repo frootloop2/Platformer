@@ -3,7 +3,7 @@ window.Physics = (function() {
 		return Math.abs(a - v) < Math.abs(b - v) ? a : b;
 	};
 	return {
-		runSystem: function(model, canvas) {
+		runSystem: function(model) {
 			// gravity
 			model.getEntities().filter(function(entity) {
 				return entity.gravity && entity.dy !== undefined && entity.collisionType !== "held";
@@ -19,12 +19,14 @@ window.Physics = (function() {
 			}).forEach(function(entity) {
 				var distanceToNearestEntity,
 					nearEdge,
-					farEdge;
+					farEdge,
+					oldX;
 
 				distanceToNearestEntity = Infinity;
 
 				nearEdge = (entity.dx > 0) ? Entity.getLeft : Entity.getRight;
 				farEdge = (entity.dx > 0) ? Entity.getRight: Entity.getLeft;
+
 				model.getExtraEntities().filter(function(otherEntity) {
 					var otherEntityOverlapsEntityZone,
 						otherEntityInDirectionOfEntityMovement,
@@ -47,7 +49,23 @@ window.Physics = (function() {
 					entity.heldEntity.x += closestToValue(0, distanceToNearestEntity, entity.dx);
 				}
 				if(entity.wraps === true) {
-					entity.x = (entity.x - model.getCamera().x + model.getView().width * 3 / 2) % model.getView().width + model.getCamera().x - model.getView().width / 2;
+					// model.getCamera().x is center of screen
+					// model.getCamera().x - model.getView().width / 2 is left edge of screen
+					// entity.x - (model.getCamera().x - model.getView().width / 2) is distance from player to left edge of screen
+					// (distance + model.getView().width) % model.getView().width is wrapped distance
+					// wrapped distance + (model.getCamera().x - model.getView().width / 2) is wrapped player position
+					entity.x = (entity.x - model.getCamera().x + model.getView().width + model.getView().width / 2) % model.getView().width + model.getCamera().x - model.getView().width / 2;
+
+					// model.getCamera().x is center of screen
+					// model.getCamera().x + model.getView().width / 2 is right edge of screen
+					// entity.x - (model.getCamera().x + model.getView().width / 2) is distance from player to right edge of screen
+					// distance % width is wrapped distance // distance is always positive
+					// wrapped distance + (model.getCamera().x + model.getView().width / 2) is wrapped player position
+					//entity.x = (entity.x - model.getCamera().x - model.getView().width / 2) % model.getView().width + model.getCamera().x + model.getView().width / 2;
+					if(entity.heldEntity !== undefined) {
+						entity.heldEntity.x = (entity.heldEntity.x - model.getCamera().x + model.getView().width + model.getView().width / 2) % model.getView().width + model.getCamera().x - model.getView().width / 2;
+						//entity.heldEntity.x = (entity.heldEntity.x - model.getCamera().x - model.getView().width / 2) % model.getView().width + model.getCamera().x + model.getView().width / 2;
+					}
 				}
 				if(Math.abs(distanceToNearestEntity) < Math.abs(entity.dx)) {
 					entity.dx = 0;
@@ -93,6 +111,13 @@ window.Physics = (function() {
 					entity.dy = 0;
 					entity.landed = true;
 				}
+			});
+
+			model.getEntities().filter(function(entity) {
+				return entity.player;
+			}).forEach(function(entity) {
+				if(entity.y < 0)
+					model.restartLevel();
 			});
 		}
 	};

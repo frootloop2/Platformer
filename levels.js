@@ -1,4 +1,4 @@
-window.Levels = [
+window.Rooms = [
 	[
 		// the order of the entities in this array is the order they are drawn, with newer entities covering previous entities
 		{
@@ -45,6 +45,18 @@ window.Levels = [
 			gravity: true,
 			camera: true,
 			grabbable: true
+		},
+		{
+			x: 800,
+			y: 450,
+			dx: 0,
+			dy: 0,
+			width: 25,
+			height: 25,
+			color: "#FF00FF",
+			collisionType: "actor",
+			gravity: true,
+			grabbable: true
 		}
 	],
 	[
@@ -65,10 +77,10 @@ window.Levels = [
 			collisionType: "actor",
 			gravity: false,
 			door: true,
-			doorDestination: 0
+			doorDestination: 2
 		},
 		{
-			x: 400,
+			x: 300,
 			y: 450,
 			width: 50,
 			height: 100,
@@ -76,10 +88,10 @@ window.Levels = [
 			collisionType: "actor",
 			gravity: false,
 			door: true,
-			doorDestination: 2
+			doorDestination: 0
 		},
 		{
-			x: 300,
+			x: 400,
 			y: 550,
 			dx: 0,
 			dy: 0,

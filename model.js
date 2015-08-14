@@ -7,7 +7,7 @@ window.Model = {
 				width: 1600,
 				height: 900
 			},
-			levelNum = 0;
+			roomNum = 0;
 		return {
 			getEntities: function() {
 				return entities;
@@ -18,17 +18,17 @@ window.Model = {
 			getView: function() {
 				return view;
 			},
-			getLevelNum: function() {
-				return levelNum;
+			getRoomNum: function() {
+				return roomNum;
 			},
-			loadLevel: function(destinationLevelNum) {
-				if(destinationLevelNum >= window.Levels.length) {
-					console.log("error: level " + destinationLevelNum + " not found");
+			loadRoom: function(destinationRoomNum) {
+				if(destinationRoomNum >= window.Rooms.length) {
+					console.log("error: room " + destinationRoomNum + " not found");
 					return;
 				}
-				levelNum = destinationLevelNum;
+				roomNum = destinationRoomNum;
 				entities = [];
-				window.Levels[levelNum].forEach(function(entity) {
+				window.Rooms[roomNum].forEach(function(entity) {
 					// copy the entities so we don't change the contents of window.Levels
 					// this makes the level 'reset' next time the player comes back to it.
 					entities.push(Entity.clone(entity));
@@ -37,11 +37,14 @@ window.Model = {
 					return entity.camera;
 				})[0];
 			},
+			restartLevel: function() {
+				this.loadRoom(this.getRoomNum());
+			},
 			getExtraEntities: function() {
 				var allEntities;
 				allEntities = [].concat(entities);
 				entities.filter(function(entity) {
-					return entity.x - entity.width / 2 < camera.x + view.width / 2 && entity.x + entity.width / 2 > camera.x - view.width / 2; // on screen any amount
+					return Entity.getLeft(entity) < camera.x + view.width / 2 && Entity.getRight(entity) > camera.x - view.width / 2; // on screen any amount
 				}).forEach(function(entity) {
 					var newEntity,
 						direction,
